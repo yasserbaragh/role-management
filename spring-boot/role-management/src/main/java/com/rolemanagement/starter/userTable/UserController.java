@@ -1,11 +1,15 @@
 package com.rolemanagement.starter.userTable;
 
+import com.rolemanagement.starter.userTable.dto.LoginRequest;
 import com.rolemanagement.starter.userTable.dto.UserDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -21,11 +25,7 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public String login(@RequestParam String email, @RequestParam String password) {
-        try {
-            return userService.login(email, password).token();
-        } catch (Exception e) {
-            throw new RuntimeException("Invalid email or password");
-        }
+    public String login(@RequestBody LoginRequest loginRequest) {
+        return userService.login(loginRequest.email(), loginRequest.password()).token();
     }
 }

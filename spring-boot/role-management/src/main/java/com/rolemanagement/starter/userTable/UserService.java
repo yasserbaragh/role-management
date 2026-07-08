@@ -1,5 +1,6 @@
 package com.rolemanagement.starter.userTable;
 
+import com.rolemanagement.starter.common.exception.ConflictException;
 import com.rolemanagement.starter.common.exception.NotFoundException;
 import com.rolemanagement.starter.config.JwtHelper;
 import com.rolemanagement.starter.userTable.dto.LoginResponse;
@@ -32,7 +33,7 @@ public class UserService {
     public void register(UserDto user) {
         UserTable newUser = new UserTable();
         if (userRepository.findByEmail(user.email()).isPresent()) {
-            throw new RuntimeException("User with email " + user.email() + " already exists.");
+            throw new ConflictException("User with email " + user.email() + " already exists.");
         }
         newUser.setEmail(user.email());
         newUser.setFullName(user.fullName());
@@ -47,7 +48,7 @@ public class UserService {
                 new UsernamePasswordAuthenticationToken(email, password)
         );
 
-        UserTable user = (UserTable) authentication.getPrincipal();
+        UserTable user = getByEmail(authentication.getName());
         String token = jwtHelper.generateToken(authentication);
 
         return new LoginResponse(
