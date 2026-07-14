@@ -11,5 +11,7 @@ public interface OrganisationMembershipRepository extends JpaRepository<Organisa
 
     Optional<OrganisationMembership> findByUserIdAndOrganisationId(Long userId, Long organisationId);
 
+    Optional<OrganisationMembership> findByUserEmailAndOrganisationId(String email, Long organisationId);
+
     boolean existsByRoleId(Long roleId);
 }

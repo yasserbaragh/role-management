@@ -2,7 +2,7 @@ package com.rolemanagement.starter.role;
 
 import com.rolemanagement.starter.common.exception.NotFoundException;
 import com.rolemanagement.starter.organisation.Organisation;
-import com.rolemanagement.starter.organisation.OrganisationService;
+import com.rolemanagement.starter.organisation.OrganisationRepository;
 import com.rolemanagement.starter.permission.Permission;
 import com.rolemanagement.starter.permission.PermissionRepository;
 import com.rolemanagement.starter.role.dto.RoleRequest;
@@ -19,7 +19,7 @@ public class RoleService {
 
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
-    private final OrganisationService organisationService;
+    private final OrganisationRepository organisationRepository;
 
     public Role getById(Long id) {
         return roleRepository.findById(id)
@@ -31,7 +31,7 @@ public class RoleService {
     }
 
     public Role create(Long organisationId, RoleRequest request) {
-        Organisation organisation = organisationService.getById(organisationId);
+        Organisation organisation = organisationRepository.getReferenceById(organisationId);
         Role role = Role.builder()
                 .name(request.name())
                 .organisation(organisation)
@@ -39,6 +39,18 @@ public class RoleService {
                 .build();
         return roleRepository.save(role);
     }
+
+    public Role createDefaultRole(Long organisationId, String roleName) {
+        Organisation organisation = organisationRepository.getReferenceById(organisationId);
+        Role role = Role.builder()
+                .name(roleName)
+                .isSystemRole(true)
+                .organisation(organisation)
+                .permissions(Set.of())
+                .build();
+        return roleRepository.save(role);
+    }
+
 
     public Role update(Long id, RoleRequest request) {
         Role role = getById(id);

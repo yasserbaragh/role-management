@@ -1,10 +1,12 @@
 package com.rolemanagement.starter.userTable;
 
 import com.rolemanagement.starter.userTable.dto.LoginRequest;
+import com.rolemanagement.starter.userTable.dto.LoginResponse;
 import com.rolemanagement.starter.userTable.dto.UserDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -26,6 +28,14 @@ public class UserController {
 
     @PostMapping("/login")
     public String login(@RequestBody LoginRequest loginRequest) {
-        return userService.login(loginRequest.email(), loginRequest.password()).token();
+        LoginResponse resp = userService.login(loginRequest.email(), loginRequest.password());
+        ResponseCookie cookie = ResponseCookie.from("jwt", resp.token())
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(24 * 60 * 60)
+                .sameSite("Lax")
+                .build();
+        return "Login successful. JWT token set in cookie: " + cookie.toString();
     }
 }

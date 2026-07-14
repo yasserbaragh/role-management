@@ -2,6 +2,7 @@ package com.rolemanagement.starter.config;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+        Cookie[] cookies = request.getCookies();
         String header = request.getHeader("Authorization");
         if (header != null && header.startsWith("Bearer ")) {
             String token = header.substring(7);
@@ -40,6 +42,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             } catch (AuthenticationException ex) {
                 log.debug("Rejecting invalid bearer token: {}", ex.getMessage());
                 SecurityContextHolder.clearContext();
+            }
+        } else if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("jwt".equals(cookie.getName())) {
+                    String token = cookie.getValue();
+                    try {
+                        if (jwtHelper.validateToken(token)) {
+                            String email = jwtHelper.getEmailFromToken(token);
+                            UserDetails userDetails = customUserDetailsService.loadUserByUsername(email);
+                            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                                    userDetails, null, userDetails.getAuthorities());
+                            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                            SecurityContextHolder.getContext().setAuthentication(authentication);
+                        }
+                    } catch (AuthenticationException ex) {
+                        log.debug("Rejecting invalid JWT cookie: {}", ex.getMessage());
+                        SecurityContextHolder.clearContext();
+                    }
+                    break;
+                }
             }
         }
         filterChain.doFilter(request, response);

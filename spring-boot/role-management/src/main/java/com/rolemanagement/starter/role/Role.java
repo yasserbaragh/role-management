@@ -3,11 +3,7 @@ package com.rolemanagement.starter.role;
 import com.rolemanagement.starter.organisation.Organisation;
 import com.rolemanagement.starter.permission.Permission;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -27,6 +23,9 @@ public class Role {
 
     @Column(nullable = false)
     private String name;
+
+    @Column(nullable = false)
+    private boolean isSystemRole;
 
     @ManyToOne
     @JoinColumn(name = "organisation_id", nullable = false)
