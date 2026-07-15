@@ -33,4 +33,13 @@ public class OrganisationService {
         return organisation;
     }
 
+    public Organisation selectOrganisation(Long organisationId, String userEmail) {
+        UserTable user = userService.getByEmail(userEmail);
+        if (!organisationMembershipService.userBelongsToOrganisation(userEmail, organisationId)) {
+            throw new NotFoundException("User is not a member of the organisation: " + organisationId);
+        }
+
+        return getById(organisationId);
+    }
+
 }

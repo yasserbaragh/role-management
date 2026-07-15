@@ -4,7 +4,6 @@ import java.util.Set;
 
 public record RoleRequest(
         String name,
-        boolean isSystemRole,
         Set<String> permissionKeys
 ) {
 }

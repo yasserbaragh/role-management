@@ -1,8 +1,10 @@
 package com.rolemanagement.starter.role;
 
+import com.rolemanagement.starter.commun.OrganisationContextHolder;
 import com.rolemanagement.starter.role.dto.RoleDto;
 import com.rolemanagement.starter.role.dto.RoleRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -14,28 +16,35 @@ public class RoleController {
 
     private final RoleService roleService;
 
-    // TODO: resolve the active organization from the request (e.g. cookie) instead of a query param.
+
     @GetMapping
-    public List<RoleDto> getByOrganisation(@RequestParam Long organisationId) {
+    @PreAuthorize("hasAuthority('VIEW_ROLES')")
+    public List<RoleDto> getByOrganisation() {
+        Long organisationId = OrganisationContextHolder.get();
         return roleService.getByOrganisation(organisationId).stream().map(RoleDto::from).toList();
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('VIEW_ROLES')")
     public RoleDto getById(@PathVariable Long id) {
         return RoleDto.from(roleService.getById(id));
     }
 
     @PostMapping
-    public RoleDto create(@RequestParam Long organisationId, @RequestBody RoleRequest request) {
+    @PreAuthorize("hasAuthority('EDIT_ROLES')")
+    public RoleDto create(@RequestBody RoleRequest request) {
+        Long organisationId = OrganisationContextHolder.get();
         return RoleDto.from(roleService.create(organisationId, request));
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("hasAuthority('EDIT_ROLES')")
     public RoleDto update(@PathVariable Long id, @RequestBody RoleRequest request) {
         return RoleDto.from(roleService.update(id, request));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('EDIT_ROLES')")
     public void delete(@PathVariable Long id) {
         roleService.delete(id);
     }
