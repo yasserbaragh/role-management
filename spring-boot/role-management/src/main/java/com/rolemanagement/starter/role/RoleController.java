@@ -27,7 +27,8 @@ public class RoleController {
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('VIEW_ROLES')")
     public RoleDto getById(@PathVariable Long id) {
-        return RoleDto.from(roleService.getById(id));
+        Long organisationId = OrganisationContextHolder.get();
+        return RoleDto.from(roleService.getById(organisationId, id));
     }
 
     @PostMapping
@@ -40,12 +41,14 @@ public class RoleController {
     @PatchMapping("/{id}")
     @PreAuthorize("hasAuthority('EDIT_ROLES')")
     public RoleDto update(@PathVariable Long id, @RequestBody RoleRequest request) {
-        return RoleDto.from(roleService.update(id, request));
+        Long organisationId = OrganisationContextHolder.get();
+        return RoleDto.from(roleService.update(organisationId, id, request));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('EDIT_ROLES')")
     public void delete(@PathVariable Long id) {
-        roleService.delete(id);
+        Long organisationId = OrganisationContextHolder.get();
+        roleService.delete(organisationId, id);
     }
 }

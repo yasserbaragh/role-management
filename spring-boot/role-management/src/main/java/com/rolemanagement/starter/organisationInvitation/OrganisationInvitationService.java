@@ -1,6 +1,8 @@
 package com.rolemanagement.starter.organisationInvitation;
 
 import com.rolemanagement.starter.commun.OrganisationContextHolder;
+import com.rolemanagement.starter.config.EmailVerificationConfig;
+import com.rolemanagement.starter.email.EmailService;
 import com.rolemanagement.starter.organisation.Organisation;
 import com.rolemanagement.starter.organisation.OrganisationService;
 import com.rolemanagement.starter.organisationInvitation.dto.InvitationRequest;
@@ -33,12 +35,14 @@ public class OrganisationInvitationService {
     private final OrganisationMembershipService organisationMembershipService;
     private final OrganisationInvitationRepository invitationRepository;
     private final UserRepository userRepository;
+    private final EmailVerificationConfig emailVerificationConfig;
+    private final EmailService emailService;
 
     @Transactional
     public OrganisationInvitation inviteByEmail(InvitationRequest request, String inviterEmail) {
         Long organisationId = OrganisationContextHolder.get();
         Organisation org = organisationService.getById(organisationId);
-        Role role = roleService.getById(request.roleId());
+        Role role = roleService.getById(organisationId, request.roleId());
 
         OrganisationInvitation invitation = OrganisationInvitation.builder()
                 .organisation(org)
@@ -52,7 +56,9 @@ public class OrganisationInvitationService {
 
         invitation = organisationInvitationRepository.save(invitation);
 
-        //emailService.sendInvitationEmail(email, org.getName(), invitation.getId());
+        if (emailVerificationConfig.isEnabled()) {
+            emailService.sendInvitationEmail(request.email(), org.getName(), invitation.getId());
+        }
         return invitation;
     }
 
@@ -87,7 +93,7 @@ public class OrganisationInvitationService {
     public OrganisationInvitation createInviteLink(InviteLinkRequest request, String inviterEmail) {
         Long organisationId = OrganisationContextHolder.get();
         Organisation org = organisationService.getById(organisationId);
-        Role role = roleService.getById(request.roleId());
+        Role role = roleService.getById(organisationId, request.roleId());
 
         OrganisationInvitation invitation = OrganisationInvitation.builder()
                 .organisation(org)

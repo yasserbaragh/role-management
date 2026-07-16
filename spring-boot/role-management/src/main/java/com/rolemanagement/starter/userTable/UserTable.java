@@ -29,6 +29,13 @@ public class UserTable {
 
     private String fullName;
 
+    @Column(nullable = false)
+    private boolean emailVerified;
+
+    private String verificationToken;
+
+    private Instant verificationTokenExpiresAt;
+
     @Column(updatable = false)
     private Instant createdAt;
 

@@ -3,7 +3,9 @@ package com.rolemanagement.starter.organisation;
 import com.rolemanagement.starter.organisation.dto.OrganisationDto;
 import com.rolemanagement.starter.organisation.dto.OrganisationRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -22,7 +24,7 @@ public class OrganisationController {
     }
 
     @PostMapping("/select/{organisationId}")
-    public String selectOrganisation(@PathVariable Long organisationId, @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<String> selectOrganisation(@PathVariable Long organisationId, @AuthenticationPrincipal UserDetails userDetails) {
         organisationService.selectOrganisation(organisationId, userDetails.getUsername());
         ResponseCookie cookie = ResponseCookie.from("organisationId", organisationId.toString())
                 .httpOnly(true)
@@ -31,7 +33,9 @@ public class OrganisationController {
                 .maxAge(24 * 60 * 60)
                 .sameSite("Lax")
                 .build();
-        return "Organisation selected successfully." + " Cookie set: " + cookie.toString();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body("Organisation selected successfully.");
     }
 
 }

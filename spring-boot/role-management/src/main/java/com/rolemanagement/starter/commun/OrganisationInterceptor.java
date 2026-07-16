@@ -1,11 +1,6 @@
 package com.rolemanagement.starter.commun;
 
-import com.rolemanagement.starter.organisationMemberhsip.OrganisationMembership;
-import com.rolemanagement.starter.organisationMemberhsip.OrganisationMembershipRepository;
-import com.rolemanagement.starter.organisationMemberhsip.OrganisationMembershipService;
-import com.rolemanagement.starter.permission.Permission;
-import com.rolemanagement.starter.permission.PermissionRepository;
-import com.rolemanagement.starter.role.Role;
+import com.rolemanagement.starter.common.exception.NotFoundException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -17,27 +12,21 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
-import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 @RequiredArgsConstructor
 @Component
 public class OrganisationInterceptor implements HandlerInterceptor {
-    private final OrganisationMembershipService organisationMembershipService;
-    private final OrganisationMembershipRepository organisationMembershipRepository;
-    private final PermissionRepository permissionRepository;
+    private final UserPermissionService userPermissionService;
 
     @Override
     public boolean preHandle(HttpServletRequest request,
                              HttpServletResponse response,
                              Object handler) {
-        System.out.println("Organisation Interceptor preHandle");
         if (request.getCookies() != null) {
-            System.out.println("Organisation Interceptor preHandle cookies");
             for (Cookie cookie : request.getCookies()) {
-                System.out.println(cookie.getName());
                 if ("organisationId".equals(cookie.getName())) {
-                    System.out.println(cookie.getValue());
                     try {
                         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
                         if (auth == null || !auth.isAuthenticated()) {
@@ -46,18 +35,17 @@ public class OrganisationInterceptor implements HandlerInterceptor {
                         }
                         String userEmail = auth.getName();
                         Long organisationId = Long.parseLong(cookie.getValue());
-                        if (!organisationMembershipService.userBelongsToOrganisation(userEmail, organisationId)) {
+
+                        Set<String> permissionKeys;
+                        try {
+                            permissionKeys = userPermissionService.getUserPermissions(userEmail, organisationId);
+                        } catch (NotFoundException e) {
                             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                             return false;
                         }
-                        OrganisationMembership membership = organisationMembershipRepository.findByUserEmailAndOrganisationId(userEmail, organisationId)
-                                .orElseThrow(() -> new RuntimeException("User is not a member of the organisation"));
-                        Role role = membership.getRole();
-                        Collection<Permission> permissions = role.isSystemRole()
-                                ? permissionRepository.findAll()
-                                : role.getPermissions();
-                        List<SimpleGrantedAuthority> authorities = permissions.stream()
-                                .map(permission -> new SimpleGrantedAuthority(permission.getKey()))
+
+                        List<SimpleGrantedAuthority> authorities = permissionKeys.stream()
+                                .map(SimpleGrantedAuthority::new)
                                 .toList();
                         UsernamePasswordAuthenticationToken newAuth = new UsernamePasswordAuthenticationToken(auth.getPrincipal(), auth.getCredentials(), authorities);
                         newAuth.setDetails(auth.getDetails());

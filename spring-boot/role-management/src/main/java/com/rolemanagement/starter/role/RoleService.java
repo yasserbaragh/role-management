@@ -1,12 +1,15 @@
 package com.rolemanagement.starter.role;
 
+import com.rolemanagement.starter.common.exception.ConflictException;
 import com.rolemanagement.starter.common.exception.NotFoundException;
 import com.rolemanagement.starter.organisation.Organisation;
 import com.rolemanagement.starter.organisation.OrganisationRepository;
+import com.rolemanagement.starter.organisationMemberhsip.OrganisationMembershipRepository;
 import com.rolemanagement.starter.permission.Permission;
 import com.rolemanagement.starter.permission.PermissionRepository;
 import com.rolemanagement.starter.role.dto.RoleRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -20,10 +23,15 @@ public class RoleService {
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
     private final OrganisationRepository organisationRepository;
+    private final OrganisationMembershipRepository organisationMembershipRepository;
 
-    public Role getById(Long id) {
-        return roleRepository.findById(id)
+    public Role getById(Long organisationId, Long id) {
+        Role role = roleRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Role not found: " + id));
+        if (!role.getOrganisation().getId().equals(organisationId)) {
+            throw new NotFoundException("Role not found: " + id);
+        }
+        return role;
     }
 
     public List<Role> getByOrganisation(Long organisationId) {
@@ -52,15 +60,20 @@ public class RoleService {
     }
 
 
-    public Role update(Long id, RoleRequest request) {
-        Role role = getById(id);
+    @CacheEvict(cacheNames = "userPermissions", allEntries = true)
+    public Role update(Long organisationId, Long id, RoleRequest request) {
+        Role role = getById(organisationId, id);
         role.setName(request.name());
         role.setPermissions(resolvePermissions(request.permissionKeys()));
         return roleRepository.save(role);
     }
 
-    public void delete(Long id) {
-        roleRepository.delete(getById(id));
+    public void delete(Long organisationId, Long id) {
+        Role role = getById(organisationId, id);
+        if (organisationMembershipRepository.existsByRoleId(id)) {
+            throw new ConflictException("Cannot delete role: it is still assigned to organisation members");
+        }
+        roleRepository.delete(role);
     }
 
     private Set<Permission> resolvePermissions(Set<String> keys) {

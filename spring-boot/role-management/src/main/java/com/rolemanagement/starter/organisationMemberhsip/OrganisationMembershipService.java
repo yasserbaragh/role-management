@@ -8,6 +8,8 @@ import com.rolemanagement.starter.role.RoleRepository;
 import com.rolemanagement.starter.userTable.UserService;
 import com.rolemanagement.starter.userTable.UserTable;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -20,6 +22,7 @@ public class OrganisationMembershipService {
     private final OrganisationRepository organisationRepository;
     private final UserService userService;
     private final RoleRepository roleRepository;
+    private final CacheManager cacheManager;
 
     public List<OrganisationMembership> getByOrganisation(Long organisationId) {
         return organisationMembershipRepository.findByOrganisationId(organisationId);
@@ -38,7 +41,9 @@ public class OrganisationMembershipService {
                         .build());
 
         membership.setRole(role);
-        return organisationMembershipRepository.save(membership);
+        OrganisationMembership saved = organisationMembershipRepository.save(membership);
+        evictPermissionsCache(user.getEmail(), organisationId);
+        return saved;
     }
 
 
@@ -47,6 +52,14 @@ public class OrganisationMembershipService {
                 .findByUserIdAndOrganisationId(userId, organisationId)
                 .orElseThrow(() -> new NotFoundException("Membership not found for user " + userId + " in organisation " + organisationId));
         organisationMembershipRepository.delete(membership);
+        evictPermissionsCache(membership.getUser().getEmail(), organisationId);
+    }
+
+    private void evictPermissionsCache(String userEmail, Long organisationId) {
+        Cache cache = cacheManager.getCache("userPermissions");
+        if (cache != null) {
+            cache.evict(userEmail + ":" + organisationId);
+        }
     }
 
     public boolean userHasRoleInOrganisation(String userEmail, Long organisationId, String roleName) {
