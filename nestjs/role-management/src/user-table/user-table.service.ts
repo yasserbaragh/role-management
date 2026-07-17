@@ -17,6 +17,7 @@ export class UserTableService {
   ) { }
 
   async create(createUserTableDto: CreateUserTableDto) {
+    console.log("j")
     const existing = await this.userRepository.findOne({ where: { email: createUserTableDto.email } })
     if (existing) {
       throw new ConflictException('Email is already in use');
