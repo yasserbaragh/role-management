@@ -4,16 +4,19 @@ import { CreateUserTableDto } from './dto/create-user-table.dto';
 import { UpdateUserTableDto } from './dto/update-user-table.dto';
 import * as express from "express"
 import { LoginUserDto } from './dto/login-user.dto';
+import { Public } from 'src/common/decorator/public/public.decorator';
 
 @Controller('/api/auth')
 export class UserTableController {
   constructor(private readonly userTableService: UserTableService) {}
 
+  @Public()
   @Post('/register')
   create(@Body() createUserTableDto: CreateUserTableDto) {
     return this.userTableService.create(createUserTableDto);
   }
 
+  @Public()
   @Post('/login')
   async login(@Body() loginUserDto: LoginUserDto, @Res({ passthrough: true }) res: express.Response) {
     const token = await this.userTableService.login(loginUserDto);

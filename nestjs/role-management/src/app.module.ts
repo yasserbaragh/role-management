@@ -5,6 +5,12 @@ import { UserTableModule } from './user-table/user-table.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
+import { OrganisationModule } from './organisation/organisation.module';
+import { OrganisationMembershipModule } from './organisation-membership/organisation-membership.module';
+import { RoleModule } from './role/role.module';
+import { PermissionModule } from './permission/permission.module';
+import { APP_GUARD } from '@nestjs/core';
+import { RolesGuard } from './common/guards/roles/roles.guard';
 
 @Module({
   imports: [
@@ -26,9 +32,16 @@ import { AuthModule } from './auth/auth.module';
       }),
     }),
     UserTableModule,
-    AuthModule
+    AuthModule,
+    OrganisationModule,
+    OrganisationMembershipModule,
+    RoleModule,
+    PermissionModule
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService, 
+    { provide: APP_GUARD, useClass: RolesGuard }
+  ],
 })
 export class AppModule {}
