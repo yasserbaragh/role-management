@@ -5,7 +5,8 @@ public record OrganisationMembershipDto(
         Long userId,
         Long organisationId,
         Long roleId,
-        String roleName
+        String roleName,
+        boolean isOwner
 ) {
     public static OrganisationMembershipDto from(com.rolemanagement.starter.organisationMemberhsip.OrganisationMembership membership) {
         return new OrganisationMembershipDto(
@@ -13,7 +14,8 @@ public record OrganisationMembershipDto(
                 membership.getUser().getId(),
                 membership.getOrganisation().getId(),
                 membership.getRole().getId(),
-                membership.getRole().getName()
+                membership.getRole().getName(),
+                membership.isOwner()
         );
     }
 }

@@ -1,5 +1,6 @@
 package com.rolemanagement.starter.organisationMemberhsip;
 
+import com.rolemanagement.starter.common.exception.ConflictException;
 import com.rolemanagement.starter.common.exception.NotFoundException;
 import com.rolemanagement.starter.organisation.Organisation;
 import com.rolemanagement.starter.organisation.OrganisationRepository;
@@ -46,13 +47,27 @@ public class OrganisationMembershipService {
         return saved;
     }
 
+    public OrganisationMembership assignOwner(Long organisationId, Long userId, Long roleId) {
+        OrganisationMembership membership = assignRole(organisationId, userId, roleId);
+        membership.setOwner(true);
+        return organisationMembershipRepository.save(membership);
+    }
 
     public void revokeMembership(Long organisationId, Long userId) {
         OrganisationMembership membership = organisationMembershipRepository
                 .findByUserIdAndOrganisationId(userId, organisationId)
                 .orElseThrow(() -> new NotFoundException("Membership not found for user " + userId + " in organisation " + organisationId));
+        if (membership.isOwner()) {
+            throw new ConflictException("Cannot revoke the organisation owner's membership");
+        }
         organisationMembershipRepository.delete(membership);
         evictPermissionsCache(membership.getUser().getEmail(), organisationId);
+    }
+
+    public void deleteAllByOrganisation(Long organisationId) {
+        List<OrganisationMembership> memberships = organisationMembershipRepository.findByOrganisationId(organisationId);
+        organisationMembershipRepository.deleteAll(memberships);
+        memberships.forEach(membership -> evictPermissionsCache(membership.getUser().getEmail(), organisationId));
     }
 
     private void evictPermissionsCache(String userEmail, Long organisationId) {
@@ -70,5 +85,11 @@ public class OrganisationMembershipService {
 
     public boolean userBelongsToOrganisation(String userEmail, Long organisationId) {
         return organisationMembershipRepository.findByUserEmailAndOrganisationId(userEmail, organisationId).isPresent();
+    }
+
+    public boolean isOwner(String userEmail, Long organisationId) {
+        return organisationMembershipRepository.findByUserEmailAndOrganisationId(userEmail, organisationId)
+                .map(OrganisationMembership::isOwner)
+                .orElse(false);
     }
 }

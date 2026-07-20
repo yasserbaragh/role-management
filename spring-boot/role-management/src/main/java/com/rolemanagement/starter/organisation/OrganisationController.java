@@ -38,4 +38,17 @@ public class OrganisationController {
                 .body("Organisation selected successfully.");
     }
 
+    @PatchMapping("/{organisationId}")
+    public OrganisationDto update(@PathVariable Long organisationId,
+                                   @AuthenticationPrincipal UserDetails userDetails,
+                                   @RequestBody OrganisationRequest request) {
+        return OrganisationDto.from(organisationService.update(organisationId, request, userDetails.getUsername()));
+    }
+
+    @DeleteMapping("/{organisationId}")
+    public ResponseEntity<Void> delete(@PathVariable Long organisationId, @AuthenticationPrincipal UserDetails userDetails) {
+        organisationService.delete(organisationId, userDetails.getUsername());
+        return ResponseEntity.noContent().build();
+    }
+
 }

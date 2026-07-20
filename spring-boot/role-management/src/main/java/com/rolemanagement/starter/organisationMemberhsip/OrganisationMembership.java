@@ -37,6 +37,9 @@ public class OrganisationMembership {
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
 
+    @Column(nullable = false)
+    private boolean isOwner;
+
     @Column(updatable = false)
     private Instant joinedAt;
 

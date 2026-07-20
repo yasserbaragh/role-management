@@ -76,6 +76,10 @@ public class RoleService {
         roleRepository.delete(role);
     }
 
+    public void deleteAllByOrganisation(Long organisationId) {
+        roleRepository.deleteAll(roleRepository.findByOrganisationId(organisationId));
+    }
+
     private Set<Permission> resolvePermissions(Set<String> keys) {
         if (keys == null) {
             return Set.of();
