@@ -17,7 +17,6 @@ export class UserTableService {
   ) { }
 
   async create(createUserTableDto: CreateUserTableDto) {
-    console.log("j")
     const existing = await this.userRepository.findOne({ where: { email: createUserTableDto.email } })
     if (existing) {
       throw new ConflictException('Email is already in use');
@@ -25,7 +24,7 @@ export class UserTableService {
 
     const hashedPass = await bcrypt.hash(createUserTableDto.password, 10)
 
-    const user = await this.userRepository.create({
+    const user = this.userRepository.create({
       ...createUserTableDto,
       password: hashedPass
     })
@@ -47,11 +46,36 @@ export class UserTableService {
     return this.authService.generateToken(existing)
   }
 
-  update(id: number, updateUserTableDto: UpdateUserTableDto) {
-    return `This action updates a #${id} userTable`;
+  async update(id: number, updateUserTableDto: UpdateUserTableDto) {
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (updateUserTableDto.email && updateUserTableDto.email !== user.email) {
+      const existing = await this.userRepository.findOne({ where: { email: updateUserTableDto.email } });
+      if (existing) {
+        throw new ConflictException('Email is already in use');
+      }
+      user.email = updateUserTableDto.email;
+    }
+
+    if (updateUserTableDto.fullName !== undefined) {
+      user.fullName = updateUserTableDto.fullName;
+    }
+
+    if (updateUserTableDto.password) {
+      user.password = await bcrypt.hash(updateUserTableDto.password, 10);
+    }
+
+    return this.userRepository.save(user);
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} userTable`;
+  async remove(id: number) {
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return this.userRepository.remove(user);
   }
 }

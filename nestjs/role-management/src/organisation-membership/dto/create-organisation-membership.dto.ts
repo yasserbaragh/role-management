@@ -5,8 +5,5 @@ export class CreateOrganisationMembershipDto {
     userId!: number;
 
     @IsInt()
-    organisationId!: number;
-
-    @IsInt()
     roleId!: number;
 }

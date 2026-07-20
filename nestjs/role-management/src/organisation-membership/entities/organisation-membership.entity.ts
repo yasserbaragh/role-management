@@ -1,4 +1,4 @@
-import { Entity, ManyToOne, PrimaryGeneratedColumn, Unique } from 'typeorm'
+import { Column, Entity, ManyToOne, PrimaryGeneratedColumn, Unique } from 'typeorm'
 import { UserTable } from '../../user-table/entities/user-table.entity'
 import { Organisation } from '../../organisation/entities/organisation.entity'
 import { Role } from '../../role/entities/role.entity'
@@ -17,4 +17,7 @@ export class OrganisationMembership {
 
     @ManyToOne(() => Role)
     role!: Role
+
+    @Column({ default: false })
+    isOwner!: boolean
 }

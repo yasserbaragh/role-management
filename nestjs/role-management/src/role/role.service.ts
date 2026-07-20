@@ -1,26 +1,79 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { In, Repository } from 'typeorm';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
+import { Role } from './entities/role.entity';
+import { Permission } from 'src/permission/entities/permission.entity';
 
 @Injectable()
 export class RoleService {
-  create(createRoleDto: CreateRoleDto) {
-    return 'This action adds a new role';
+  constructor(
+    @InjectRepository(Role)
+    private readonly roleRepository: Repository<Role>,
+
+    @InjectRepository(Permission)
+    private readonly permissionRepository: Repository<Permission>,
+  ) {}
+
+  private resolvePermissions(permissionKeys?: string[]) {
+    if (!permissionKeys?.length) return [];
+    return this.permissionRepository.find({ where: { key: In(permissionKeys) } });
   }
 
-  findAll() {
-    return `This action returns all role`;
+  private async findScoped(id: number, organisationId: number) {
+    const role = await this.roleRepository.findOne({
+      where: { id, organisation: { id: organisationId } },
+      relations: ['permissions'],
+    });
+    if (!role) {
+      throw new NotFoundException('Role not found');
+    }
+    return role;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} role`;
+  async create(createRoleDto: CreateRoleDto, organisationId: number) {
+    const permissions = await this.resolvePermissions(createRoleDto.permissionKeys);
+
+    const role = this.roleRepository.create({
+      name: createRoleDto.name,
+      isSystemRole: false,
+      organisation: { id: organisationId },
+      permissions,
+    });
+
+    return this.roleRepository.save(role);
   }
 
-  update(id: number, updateRoleDto: UpdateRoleDto) {
-    return `This action updates a #${id} role`;
+  findAll(organisationId: number) {
+    return this.roleRepository.find({
+      where: { organisation: { id: organisationId } },
+      relations: ['permissions'],
+    });
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} role`;
+  findOne(id: number, organisationId: number) {
+    return this.findScoped(id, organisationId);
+  }
+
+  async update(id: number, updateRoleDto: UpdateRoleDto, organisationId: number) {
+    const role = await this.findScoped(id, organisationId);
+
+    if (updateRoleDto.name !== undefined) {
+      role.name = updateRoleDto.name;
+    }
+    if (updateRoleDto.permissionKeys !== undefined) {
+      role.permissions = await this.resolvePermissions(updateRoleDto.permissionKeys);
+    }
+
+    return this.roleRepository.save(role);
+  }
+
+  async remove(id: number, organisationId: number) {
+    const role = await this.findScoped(id, organisationId);
+    if (role.isSystemRole) {
+      throw new ForbiddenException('System roles cannot be deleted');
+    }
+    return this.roleRepository.remove(role);
   }
 }
