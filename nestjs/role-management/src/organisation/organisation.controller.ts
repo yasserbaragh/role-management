@@ -5,6 +5,9 @@ import { UpdateOrganisationDto } from './dto/update-organisation.dto';
 import { CurrentUser } from 'src/common/decorator/current-user/current-user.decorator';
 import type { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 import * as express from 'express';
+import { CurrentOrganisation } from 'src/common/decorator/current-organisation/current-organisation.decorator';
+import { Permissions } from 'src/common/decorator/permissions/permissions.decorator';
+import { AddUserToOrganisationDto } from './dto/add-user-to-organisation.dto';
 
 @Controller('/api/organisation')
 export class OrganisationController {
@@ -32,6 +35,16 @@ export class OrganisationController {
     });
 
     return organisation;
+  }
+
+  @Permissions('CREATE-MEMBERSHIP')
+  @Post('/:id/add-user')
+  addUserToOrg(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentOrganisation() organisationId: number,
+    @Body() addUserToOrganisationDto: AddUserToOrganisationDto,
+  ) {
+    return this.organisationService.addUserToOrganisation(id, organisationId, addUserToOrganisationDto);
   }
 
   @Patch(':id')

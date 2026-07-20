@@ -1,6 +1,7 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateOrganisationDto } from './dto/create-organisation.dto';
 import { UpdateOrganisationDto } from './dto/update-organisation.dto';
+import { AddUserToOrganisationDto } from './dto/add-user-to-organisation.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Organisation } from './entities/organisation.entity';
 import { Repository } from 'typeorm';
@@ -81,6 +82,40 @@ export class OrganisationService {
     }
 
     return membership.organisation
+  }
+
+  async addUserToOrganisation(id: number, organisationId: number, addUserToOrganisationDto: AddUserToOrganisationDto) {
+    if (id !== organisationId) {
+      throw new ForbiddenException('You can only add members to your currently selected organisation')
+    }
+
+    const user = await this.userRepository.findOne({ where: { email: addUserToOrganisationDto.email } })
+    if (!user) {
+      throw new NotFoundException('User not found')
+    }
+
+    const role = await this.roleRepository.findOne({
+      where: { id: addUserToOrganisationDto.roleId, organisation: { id: organisationId } },
+    })
+    if (!role) {
+      throw new NotFoundException('Role not found in this organisation')
+    }
+
+    const existing = await this.membershipRepository.findOne({
+      where: { user: { id: user.id }, organisation: { id: organisationId } },
+    })
+    if (existing) {
+      throw new ConflictException('User is already a member of this organisation')
+    }
+
+    const membership = this.membershipRepository.create({
+      user,
+      role,
+      organisation: { id: organisationId },
+      isOwner: false,
+    })
+
+    return this.membershipRepository.save(membership)
   }
 
   async update(id: number, updateOrganisationDto: UpdateOrganisationDto, user: JwtPayload) {

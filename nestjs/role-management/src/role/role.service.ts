@@ -1,10 +1,11 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { Role } from './entities/role.entity';
 import { Permission } from 'src/permission/entities/permission.entity';
+import { OrganisationMembership } from 'src/organisation-membership/entities/organisation-membership.entity';
 
 @Injectable()
 export class RoleService {
@@ -14,6 +15,9 @@ export class RoleService {
 
     @InjectRepository(Permission)
     private readonly permissionRepository: Repository<Permission>,
+
+    @InjectRepository(OrganisationMembership)
+    private readonly membershipRepository: Repository<OrganisationMembership>,
   ) {}
 
   private resolvePermissions(permissionKeys?: string[]) {
@@ -74,6 +78,14 @@ export class RoleService {
     if (role.isSystemRole) {
       throw new ForbiddenException('System roles cannot be deleted');
     }
+
+    const membershipCount = await this.membershipRepository.count({
+      where: { role: { id } },
+    });
+    if (membershipCount > 0) {
+      throw new ConflictException('Role is still assigned to one or more members and cannot be deleted');
+    }
+
     return this.roleRepository.remove(role);
   }
 }
