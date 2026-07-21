@@ -37,7 +37,7 @@ export class OrganisationController {
     return organisation;
   }
 
-  @Permissions('CREATE-MEMBERSHIP')
+  @Permissions('EDIT-MEMBERSHIP')
   @Post('/:id/add-user')
   addUserToOrg(
     @Param('id', ParseIntPipe) id: number,

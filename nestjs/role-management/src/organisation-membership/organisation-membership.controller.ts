@@ -9,7 +9,7 @@ import { CurrentOrganisation } from 'src/common/decorator/current-organisation/c
 export class OrganisationMembershipController {
   constructor(private readonly organisationMembershipService: OrganisationMembershipService) {}
 
-  @Permissions('CREATE-MEMBERSHIP')
+  @Permissions('EDIT-MEMBERSHIP')
   @Post()
   create(
     @Body() createOrganisationMembershipDto: CreateOrganisationMembershipDto,

@@ -11,6 +11,8 @@ import { RoleModule } from './role/role.module';
 import { PermissionModule } from './permission/permission.module';
 import { APP_GUARD } from '@nestjs/core';
 import { RolesGuard } from './common/guards/roles/roles.guard';
+import { MemberhsipInvitationModule } from './memberhsip-invitation/memberhsip-invitation.module';
+import { ExampleModule } from './example/example.module';
 
 @Module({
   imports: [
@@ -36,7 +38,9 @@ import { RolesGuard } from './common/guards/roles/roles.guard';
     OrganisationModule,
     OrganisationMembershipModule,
     RoleModule,
-    PermissionModule
+    PermissionModule,
+    MemberhsipInvitationModule,
+    ExampleModule
   ],
   controllers: [AppController],
   providers: [
