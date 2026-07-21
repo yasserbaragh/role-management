@@ -4,11 +4,8 @@ import com.rolemanagement.starter.organisation.Organisation;
 import com.rolemanagement.starter.role.Role;
 import com.rolemanagement.starter.userTable.UserTable;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.time.Instant;
 
@@ -38,6 +35,7 @@ public class OrganisationMembership {
     private Role role;
 
     @Column(nullable = false)
+    @ColumnDefault("false")
     private boolean isOwner;
 
     @Column(updatable = false)

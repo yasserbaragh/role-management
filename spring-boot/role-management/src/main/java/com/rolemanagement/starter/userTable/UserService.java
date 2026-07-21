@@ -6,7 +6,12 @@ import com.rolemanagement.starter.common.exception.NotFoundException;
 import com.rolemanagement.starter.config.EmailVerificationConfig;
 import com.rolemanagement.starter.config.JwtHelper;
 import com.rolemanagement.starter.email.EmailService;
+import com.rolemanagement.starter.organisationMemberhsip.OrganisationMembershipRepository;
+import com.rolemanagement.starter.userTable.dto.AccountDto;
+import com.rolemanagement.starter.userTable.dto.ChangePasswordRequest;
 import com.rolemanagement.starter.userTable.dto.LoginResponse;
+import com.rolemanagement.starter.userTable.dto.ResetPasswordRequest;
+import com.rolemanagement.starter.userTable.dto.UpdateProfileRequest;
 import com.rolemanagement.starter.userTable.dto.UserDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -17,6 +22,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -28,6 +34,7 @@ public class UserService {
     private final AuthenticationManager authenticationManager;
     private final EmailVerificationConfig emailVerificationConfig;
     private final EmailService emailService;
+    private final OrganisationMembershipRepository organisationMembershipRepository;
 
     public UserTable getById(Long id) {
         return userRepository.findById(id)
@@ -91,5 +98,58 @@ public class UserService {
                 user.getEmail(),
                 user.getFullName()
         );
+    }
+
+    public AccountDto updateProfile(String email, UpdateProfileRequest request) {
+        UserTable user = getByEmail(email);
+        user.setFullName(request.fullName());
+        return AccountDto.from(userRepository.save(user));
+    }
+
+    public void deleteAccount(String email) {
+        UserTable user = getByEmail(email);
+        if (organisationMembershipRepository.existsByUserId(user.getId())) {
+            throw new ConflictException("Leave or transfer ownership of all organisations before deleting your account");
+        }
+        userRepository.delete(user);
+    }
+
+    public void changePassword(String email, ChangePasswordRequest request) {
+        UserTable user = getByEmail(email);
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
+            throw new ForbiddenException("Current password is incorrect");
+        }
+        user.setPassword(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
+    }
+
+    public Optional<String> forgotPassword(String email) {
+        Optional<UserTable> maybeUser = userRepository.findByEmail(email);
+        if (maybeUser.isEmpty()) {
+            return Optional.empty();
+        }
+        UserTable user = maybeUser.get();
+        String token = UUID.randomUUID().toString();
+        user.setResetPasswordToken(token);
+        user.setResetPasswordTokenExpiresAt(Instant.now().plus(1, ChronoUnit.HOURS));
+        userRepository.save(user);
+
+        if (emailVerificationConfig.isEnabled()) {
+            emailService.sendPasswordResetEmail(user.getEmail(), token);
+            return Optional.empty();
+        }
+        return Optional.of(token);
+    }
+
+    public void resetPassword(ResetPasswordRequest request) {
+        UserTable user = userRepository.findByResetPasswordToken(request.token())
+                .orElseThrow(() -> new NotFoundException("Invalid reset token"));
+        if (user.getResetPasswordTokenExpiresAt() == null || user.getResetPasswordTokenExpiresAt().isBefore(Instant.now())) {
+            throw new ConflictException("Reset token expired");
+        }
+        user.setPassword(passwordEncoder.encode(request.newPassword()));
+        user.setResetPasswordToken(null);
+        user.setResetPasswordTokenExpiresAt(null);
+        userRepository.save(user);
     }
 }

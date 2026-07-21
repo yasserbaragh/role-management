@@ -5,7 +5,7 @@ import com.rolemanagement.starter.common.exception.NotFoundException;
 import com.rolemanagement.starter.organisation.Organisation;
 import com.rolemanagement.starter.organisation.OrganisationRepository;
 import com.rolemanagement.starter.role.Role;
-import com.rolemanagement.starter.role.RoleRepository;
+import com.rolemanagement.starter.role.RoleService;
 import com.rolemanagement.starter.userTable.UserService;
 import com.rolemanagement.starter.userTable.UserTable;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +22,7 @@ public class OrganisationMembershipService {
     private final OrganisationMembershipRepository organisationMembershipRepository;
     private final OrganisationRepository organisationRepository;
     private final UserService userService;
-    private final RoleRepository roleRepository;
+    private final RoleService roleService;
     private final CacheManager cacheManager;
 
     public List<OrganisationMembership> getByOrganisation(Long organisationId) {
@@ -32,7 +32,7 @@ public class OrganisationMembershipService {
     public OrganisationMembership assignRole(Long organisationId, Long userId, Long roleId) {
         Organisation organisation = organisationRepository.getReferenceById(organisationId);
         UserTable user = userService.getById(userId);
-        Role role = roleRepository.getReferenceById(roleId);
+        Role role = roleService.getById(organisationId, roleId);
 
         OrganisationMembership membership = organisationMembershipRepository
                 .findByUserIdAndOrganisationId(userId, organisationId)

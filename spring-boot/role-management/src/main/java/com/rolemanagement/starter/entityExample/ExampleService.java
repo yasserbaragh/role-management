@@ -16,9 +16,13 @@ public class ExampleService {
     private final ExampleRepository exampleRepository;
     private final OrganisationRepository organisationRepository;
 
-    public Example getById(Long id) {
-        return exampleRepository.findById(id)
+    public Example getById(Long organisationId, Long id) {
+        Example example = exampleRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Example not found: " + id));
+        if (!example.getOrganisation().getId().equals(organisationId)) {
+            throw new NotFoundException("Example not found: " + id);
+        }
+        return example;
     }
 
     public List<Example> getByOrganisation(Long organisationId) {
@@ -34,13 +38,13 @@ public class ExampleService {
         return exampleRepository.save(example);
     }
 
-    public Example update(Long id, ExampleRequest request) {
-        Example example = getById(id);
+    public Example update(Long organisationId, Long id, ExampleRequest request) {
+        Example example = getById(organisationId, id);
         example.setName(request.name());
         return exampleRepository.save(example);
     }
 
-    public void delete(Long id) {
-        exampleRepository.delete(getById(id));
+    public void delete(Long organisationId, Long id) {
+        exampleRepository.delete(getById(organisationId, id));
     }
 }

@@ -1,11 +1,8 @@
 package com.rolemanagement.starter.userTable;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.time.Instant;
 
@@ -30,11 +27,16 @@ public class UserTable {
     private String fullName;
 
     @Column(nullable = false)
+    @ColumnDefault("false")
     private boolean emailVerified;
 
     private String verificationToken;
 
     private Instant verificationTokenExpiresAt;
+
+    private String resetPasswordToken;
+
+    private Instant resetPasswordTokenExpiresAt;
 
     @Column(updatable = false)
     private Instant createdAt;

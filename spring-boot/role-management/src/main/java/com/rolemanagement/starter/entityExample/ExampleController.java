@@ -26,7 +26,8 @@ public class ExampleController {
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('VIEW_EXAMPLE')")
     public ExampleDto getById(@PathVariable Long id) {
-        return ExampleDto.from(exampleService.getById(id));
+        Long organisationId = OrganisationContextHolder.get();
+        return ExampleDto.from(exampleService.getById(organisationId, id));
     }
 
     @PostMapping
@@ -39,12 +40,14 @@ public class ExampleController {
     @PatchMapping("/{id}")
     @PreAuthorize("hasAuthority('EDIT_EXAMPLE')")
     public ExampleDto update(@PathVariable Long id, @RequestBody ExampleRequest request) {
-        return ExampleDto.from(exampleService.update(id, request));
+        Long organisationId = OrganisationContextHolder.get();
+        return ExampleDto.from(exampleService.update(organisationId, id, request));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('EDIT_EXAMPLE')")
     public void delete(@PathVariable Long id) {
-        exampleService.delete(id);
+        Long organisationId = OrganisationContextHolder.get();
+        exampleService.delete(organisationId, id);
     }
 }

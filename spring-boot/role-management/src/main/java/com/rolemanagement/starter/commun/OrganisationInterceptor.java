@@ -40,8 +40,12 @@ public class OrganisationInterceptor implements HandlerInterceptor {
                         try {
                             permissionKeys = userPermissionService.getUserPermissions(userEmail, organisationId);
                         } catch (NotFoundException e) {
-                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                            return false;
+                            // organisationId cookie doesn't match a membership for this user
+                            // (stale/foreign org, e.g. leftover from another account). Don't block
+                            // the whole request - just skip granting org-scoped authorities.
+                            // Endpoints that actually require org context/permissions will still
+                            // reject it on their own (via @PreAuthorize or OrganisationContextHolder).
+                            break;
                         }
 
                         List<SimpleGrantedAuthority> authorities = permissionKeys.stream()

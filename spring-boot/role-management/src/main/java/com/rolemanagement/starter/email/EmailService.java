@@ -27,4 +27,12 @@ public class EmailService {
                 + ". Use this invitation id to accept: " + invitationId);
         mailSender.send(message);
     }
+
+    public void sendPasswordResetEmail(String to, String token) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(to);
+        message.setSubject("Reset your password");
+        message.setText("Use this token to reset your password: " + token);
+        mailSender.send(message);
+    }
 }
