@@ -13,11 +13,29 @@ import { APP_GUARD } from '@nestjs/core';
 import { RolesGuard } from './common/guards/roles/roles.guard';
 import { MemberhsipInvitationModule } from './memberhsip-invitation/memberhsip-invitation.module';
 import { ExampleModule } from './example/example.module';
+import { CacheModule } from "@nestjs/cache-manager"
+import Keyv from 'keyv';
+import KeyvRedis from '@keyv/redis';
 
 @Module({
   imports: [
      ConfigModule.forRoot({
       isGlobal: true,
+    }),
+    CacheModule.registerAsync({
+      isGlobal: true,
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async(configService: ConfigService) => ({
+        stores: [
+          new Keyv({
+            store: new KeyvRedis(
+              `redis://${configService.get<string>('REDIS_HOST')}:${configService.get<number>('REDIS_PORT')}`,
+            )
+          })
+        ],
+         ttl: 60_000
+      })
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],

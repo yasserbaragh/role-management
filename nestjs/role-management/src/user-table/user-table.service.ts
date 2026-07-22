@@ -1,18 +1,22 @@
 import { ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { CreateUserTableDto } from './dto/create-user-table.dto';
 import { UpdateUserTableDto } from './dto/update-user-table.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserTable } from './entities/user-table.entity';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { LoginUserDto } from './dto/login-user.dto';
 import { AuthService } from 'src/auth/auth.service';
+import { OrganisationMembership } from 'src/organisation-membership/entities/organisation-membership.entity';
 
 @Injectable()
 export class UserTableService {
   constructor(
     @InjectRepository(UserTable)
     private readonly userRepository: Repository<UserTable>,
+    @InjectRepository(OrganisationMembership)
+    private readonly membershipRepository: Repository<OrganisationMembership>,
     private readonly authService: AuthService
   ) { }
 
@@ -64,11 +68,23 @@ export class UserTableService {
       user.fullName = updateUserTableDto.fullName;
     }
 
-    if (updateUserTableDto.password) {
-      user.password = await bcrypt.hash(updateUserTableDto.password, 10);
+    return this.userRepository.save(user);
+  }
+
+  async changePassword(id: number, changePasswordDto: ChangePasswordDto) {
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) {
+      throw new NotFoundException('User not found');
     }
 
-    return this.userRepository.save(user);
+    const passwordMatches = await bcrypt.compare(changePasswordDto.currentPassword, user.password);
+    if (!passwordMatches) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    user.password = await bcrypt.hash(changePasswordDto.newPassword, 10);
+    await this.userRepository.save(user);
+    return { message: 'Password updated successfully' };
   }
 
   async remove(id: number) {
@@ -76,6 +92,13 @@ export class UserTableService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
+
+    const memberships = await this.membershipRepository.find({ where: { user: { id } } });
+    if (memberships.some((membership) => membership.isOwner)) {
+      throw new ConflictException('Delete or transfer ownership of your organisations before deleting your account');
+    }
+
+    await this.membershipRepository.remove(memberships);
     return this.userRepository.remove(user);
   }
 }

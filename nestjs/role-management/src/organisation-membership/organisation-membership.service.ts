@@ -1,11 +1,14 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 import { CreateOrganisationMembershipDto } from './dto/create-organisation-membership.dto';
 import { UpdateOrganisationMembershipDto } from './dto/update-organisation-membership.dto';
 import { OrganisationMembership } from './entities/organisation-membership.entity';
 import { UserTable } from 'src/user-table/entities/user-table.entity';
 import { Role } from 'src/role/entities/role.entity';
+import { membershipCacheKey } from 'src/common/guards/roles/roles.guard';
 
 @Injectable()
 export class OrganisationMembershipService {
@@ -18,6 +21,9 @@ export class OrganisationMembershipService {
 
     @InjectRepository(Role)
     private readonly roleRepository: Repository<Role>,
+
+    @Inject(CACHE_MANAGER)
+    private readonly cache: Cache,
   ) {}
 
   private async findScoped(id: number, organisationId: number) {
@@ -78,16 +84,27 @@ export class OrganisationMembershipService {
 
   async update(id: number, updateOrganisationMembershipDto: UpdateOrganisationMembershipDto, organisationId: number) {
     const membership = await this.findScoped(id, organisationId);
+    if (membership.isOwner) {
+      throw new ForbiddenException('The organisation owner\'s membership cannot be changed');
+    }
 
     if (updateOrganisationMembershipDto.roleId !== undefined) {
       membership.role = await this.resolveRole(updateOrganisationMembershipDto.roleId, organisationId);
     }
 
-    return this.membershipRepository.save(membership);
+    const saved = await this.membershipRepository.save(membership);
+    await this.cache.del(membershipCacheKey(membership.user.id, organisationId));
+    return saved;
   }
 
   async remove(id: number, organisationId: number) {
     const membership = await this.findScoped(id, organisationId);
-    return this.membershipRepository.remove(membership);
+    if (membership.isOwner) {
+      throw new ForbiddenException('The organisation owner cannot be removed');
+    }
+
+    const removed = await this.membershipRepository.remove(membership);
+    await this.cache.del(membershipCacheKey(membership.user.id, organisationId));
+    return removed;
   }
 }

@@ -6,13 +6,13 @@ import { Permissions } from 'src/common/decorator/permissions/permissions.decora
 export class PermissionController {
   constructor(private readonly permissionService: PermissionService) {}
 
-  @Permissions('READ-PERMISSION')
+  @Permissions('VIEW-PERMISSION')
   @Get()
   findAll() {
     return this.permissionService.findAll();
   }
 
-  @Permissions('READ-PERMISSION')
+  @Permissions('VIEW-PERMISSION')
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.permissionService.findOne(id);

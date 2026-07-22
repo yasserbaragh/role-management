@@ -18,13 +18,13 @@ export class OrganisationMembershipController {
     return this.organisationMembershipService.create(createOrganisationMembershipDto, organisationId);
   }
 
-  @Permissions('READ-MEMBERSHIP')
+  @Permissions('VIEW-MEMBERSHIP')
   @Get()
   findAll(@CurrentOrganisation() organisationId: number) {
     return this.organisationMembershipService.findAll(organisationId);
   }
 
-  @Permissions('READ-MEMBERSHIP')
+  @Permissions('VIEW-MEMBERSHIP')
   @Get(':id')
   findOne(
     @Param('id', ParseIntPipe) id: number,

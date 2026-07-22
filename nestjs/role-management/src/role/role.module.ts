@@ -5,9 +5,10 @@ import { RoleController } from './role.controller';
 import { Role } from './entities/role.entity';
 import { Permission } from 'src/permission/entities/permission.entity';
 import { OrganisationMembership } from 'src/organisation-membership/entities/organisation-membership.entity';
+import { MembershipInvitation } from 'src/memberhsip-invitation/entities/membership-invitation.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Role, Permission, OrganisationMembership])],
+  imports: [TypeOrmModule.forFeature([Role, Permission, OrganisationMembership, MembershipInvitation])],
   controllers: [RoleController],
   providers: [RoleService],
   exports: [TypeOrmModule],

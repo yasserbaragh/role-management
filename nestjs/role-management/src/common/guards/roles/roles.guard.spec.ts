@@ -5,6 +5,7 @@ describe('RolesGuard', () => {
     const jwtService = {} as any;
     const reflector = {} as any;
     const membershipRepository = {} as any;
-    expect(new RolesGuard(jwtService, reflector, membershipRepository)).toBeDefined();
+    const cache = {} as any;
+    expect(new RolesGuard(jwtService, reflector, membershipRepository, cache)).toBeDefined();
   });
 });

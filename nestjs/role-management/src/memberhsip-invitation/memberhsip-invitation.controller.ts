@@ -20,7 +20,7 @@ export class MemberhsipInvitationController {
     return this.memberhsipInvitationService.createLink(createInvitationLinkDto, organisationId, user.sub);
   }
 
-  @Permissions('READ-MEMBERSHIP')
+  @Permissions('VIEW-MEMBERSHIP')
   @Get()
   findAll(@CurrentOrganisation() organisationId: number) {
     return this.memberhsipInvitationService.findAll(organisationId);

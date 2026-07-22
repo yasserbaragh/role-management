@@ -18,13 +18,13 @@ export class ExampleController {
     return this.exampleService.create(createExampleDto, organisationId);
   }
 
-  @Permissions('READ-EXAMPLE')
+  @Permissions('VIEW-EXAMPLE')
   @Get()
   findAll(@CurrentOrganisation() organisationId: number) {
     return this.exampleService.findAll(organisationId);
   }
 
-  @Permissions('READ-EXAMPLE')
+  @Permissions('VIEW-EXAMPLE')
   @Get(':id')
   findOne(
     @Param('id', ParseIntPipe) id: number,

@@ -3,10 +3,11 @@ import { UserTableService } from './user-table.service';
 import { UserTableController } from './user-table.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserTable } from './entities/user-table.entity';
+import { OrganisationMembership } from 'src/organisation-membership/entities/organisation-membership.entity';
 import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([UserTable]), AuthModule],
+  imports: [TypeOrmModule.forFeature([UserTable, OrganisationMembership]), AuthModule],
   controllers: [UserTableController],
   providers: [UserTableService],
   exports: [UserTableService],

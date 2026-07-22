@@ -1,13 +1,18 @@
-import { CanActivate, ExecutionContext, ForbiddenException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { CanActivate, ExecutionContext, ForbiddenException, Inject, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 import { IS_PUBLIC_KEY } from 'src/common/decorator/public/public.decorator';
 import { PERMISSIONS_KEY } from 'src/common/decorator/permissions/permissions.decorator';
 import { OrganisationMembership } from 'src/organisation-membership/entities/organisation-membership.entity';
 import type { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 
+export function membershipCacheKey(userId: number, organisationId: number) {
+  return `membership:user:${userId}:org:${organisationId}`;
+}
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -18,6 +23,8 @@ export class RolesGuard implements CanActivate {
     private readonly reflector: Reflector,
     @InjectRepository(OrganisationMembership)
     private readonly membershipRepository: Repository<OrganisationMembership>,
+    @Inject(CACHE_MANAGER)
+    private readonly cache: Cache,
   ) {}
 
   async canActivate(
@@ -70,13 +77,20 @@ export class RolesGuard implements CanActivate {
       throw new ForbiddenException('No organisation selected');
     }
 
-    const membership = await this.membershipRepository.findOne({
-      where: {
-        user: { id: payload.sub },
-        organisation: { id: organisationId },
-      },
-      relations: ['role', 'role.permissions'],
-    });
+    const cacheKey = membershipCacheKey(payload.sub, organisationId);
+    let membership = await this.cache.get<OrganisationMembership>(cacheKey);
+    if (!membership) {
+      membership = await this.membershipRepository.findOne({
+        where: {
+          user: { id: payload.sub },
+          organisation: { id: organisationId },
+        },
+        relations: ['role', 'role.permissions'],
+      }) ?? undefined;
+      if (membership) {
+        await this.cache.set(cacheKey, membership);
+      }
+    }
     if (!membership) {
       throw new ForbiddenException('You are not a member of this organisation');
     }

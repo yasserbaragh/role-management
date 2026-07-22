@@ -9,6 +9,7 @@ import { Role } from 'src/role/entities/role.entity';
 import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 import { UserTable } from 'src/user-table/entities/user-table.entity';
 import { OrganisationMembership } from 'src/organisation-membership/entities/organisation-membership.entity';
+import { MembershipInvitation } from 'src/memberhsip-invitation/entities/membership-invitation.entity';
 
 @Injectable()
 export class OrganisationService {
@@ -23,7 +24,10 @@ export class OrganisationService {
     private readonly userRepository: Repository<UserTable>,
 
     @InjectRepository(OrganisationMembership)
-    private readonly membershipRepository: Repository<OrganisationMembership>
+    private readonly membershipRepository: Repository<OrganisationMembership>,
+
+    @InjectRepository(MembershipInvitation)
+    private readonly invitationRepository: Repository<MembershipInvitation>
   ) {}
 
   private async ensureOwner(organisationId: number, userId: number) {
@@ -126,6 +130,9 @@ export class OrganisationService {
 
   async remove(id: number, user: JwtPayload) {
     const organisation = await this.ensureOwner(id, user.sub)
+
+    const invitations = await this.invitationRepository.find({ where: { organisation: { id } } })
+    await this.invitationRepository.remove(invitations)
 
     const memberships = await this.membershipRepository.find({ where: { organisation: { id } } })
     await this.membershipRepository.remove(memberships)

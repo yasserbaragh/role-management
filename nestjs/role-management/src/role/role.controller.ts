@@ -18,13 +18,13 @@ export class RoleController {
     return this.roleService.create(createRoleDto, organisationId);
   }
 
-  @Permissions('READ-ROLE')
+  @Permissions('VIEW-ROLE')
   @Get()
   findAll(@CurrentOrganisation() organisationId: number) {
     return this.roleService.findAll(organisationId);
   }
 
-  @Permissions('READ-ROLE')
+  @Permissions('VIEW-ROLE')
   @Get(':id')
   findOne(
     @Param('id', ParseIntPipe) id: number,

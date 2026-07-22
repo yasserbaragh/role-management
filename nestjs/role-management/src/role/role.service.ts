@@ -1,11 +1,15 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { Role } from './entities/role.entity';
 import { Permission } from 'src/permission/entities/permission.entity';
 import { OrganisationMembership } from 'src/organisation-membership/entities/organisation-membership.entity';
+import { MembershipInvitation } from 'src/memberhsip-invitation/entities/membership-invitation.entity';
+import { membershipCacheKey } from 'src/common/guards/roles/roles.guard';
 
 @Injectable()
 export class RoleService {
@@ -18,7 +22,28 @@ export class RoleService {
 
     @InjectRepository(OrganisationMembership)
     private readonly membershipRepository: Repository<OrganisationMembership>,
+
+    @InjectRepository(MembershipInvitation)
+    private readonly invitationRepository: Repository<MembershipInvitation>,
+
+    @Inject(CACHE_MANAGER)
+    private readonly cache: Cache,
   ) {}
+
+  private listKey(organisationId: number) {
+    return `roles:org:${organisationId}`;
+  }
+
+  private itemKey(id: number, organisationId: number) {
+    return `roles:org:${organisationId}:id:${id}`;
+  }
+
+  private async invalidate(organisationId: number, id?: number) {
+    await this.cache.del(this.listKey(organisationId));
+    if (id !== undefined) {
+      await this.cache.del(this.itemKey(id, organisationId));
+    }
+  }
 
   private resolvePermissions(permissionKeys?: string[]) {
     if (!permissionKeys?.length) return [];
@@ -46,18 +71,36 @@ export class RoleService {
       permissions,
     });
 
-    return this.roleRepository.save(role);
+    const saved = await this.roleRepository.save(role);
+    await this.invalidate(organisationId);
+    return saved;
   }
 
-  findAll(organisationId: number) {
-    return this.roleRepository.find({
+  async findAll(organisationId: number) {
+    const key = this.listKey(organisationId);
+    const cached = await this.cache.get<Role[]>(key);
+    if (cached) {
+      return cached;
+    }
+
+    const roles = await this.roleRepository.find({
       where: { organisation: { id: organisationId } },
       relations: ['permissions'],
     });
+    await this.cache.set(key, roles);
+    return roles;
   }
 
-  findOne(id: number, organisationId: number) {
-    return this.findScoped(id, organisationId);
+  async findOne(id: number, organisationId: number) {
+    const key = this.itemKey(id, organisationId);
+    const cached = await this.cache.get<Role>(key);
+    if (cached) {
+      return cached;
+    }
+
+    const role = await this.findScoped(id, organisationId);
+    await this.cache.set(key, role);
+    return role;
   }
 
   async update(id: number, updateRoleDto: UpdateRoleDto, organisationId: number) {
@@ -70,7 +113,22 @@ export class RoleService {
       role.permissions = await this.resolvePermissions(updateRoleDto.permissionKeys);
     }
 
-    return this.roleRepository.save(role);
+    const saved = await this.roleRepository.save(role);
+    await this.invalidate(organisationId, id);
+
+    if (updateRoleDto.permissionKeys !== undefined) {
+      const affected = await this.membershipRepository.find({
+        where: { role: { id } },
+        relations: ['user'],
+      });
+      await Promise.all(
+        affected.map((membership) =>
+          this.cache.del(membershipCacheKey(membership.user.id, organisationId)),
+        ),
+      );
+    }
+
+    return saved;
   }
 
   async remove(id: number, organisationId: number) {
@@ -86,6 +144,15 @@ export class RoleService {
       throw new ConflictException('Role is still assigned to one or more members and cannot be deleted');
     }
 
-    return this.roleRepository.remove(role);
+    const invitationCount = await this.invitationRepository.count({
+      where: { role: { id } },
+    });
+    if (invitationCount > 0) {
+      throw new ConflictException('Role is still referenced by one or more invitation links and cannot be deleted');
+    }
+
+    const removed = await this.roleRepository.remove(role);
+    await this.invalidate(organisationId, id);
+    return removed;
   }
 }

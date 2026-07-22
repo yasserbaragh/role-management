@@ -10,9 +10,10 @@ import { OrganisationMembershipModule } from 'src/organisation-membership/organi
 import { Role } from 'src/role/entities/role.entity';
 import { UserTable } from 'src/user-table/entities/user-table.entity';
 import { OrganisationMembership } from 'src/organisation-membership/entities/organisation-membership.entity';
+import { MembershipInvitation } from 'src/memberhsip-invitation/entities/membership-invitation.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Organisation, Role, UserTable, OrganisationMembership]), RoleModule, UserTableModule, AuthModule, OrganisationMembershipModule],
+  imports: [TypeOrmModule.forFeature([Organisation, Role, UserTable, OrganisationMembership, MembershipInvitation]), RoleModule, UserTableModule, AuthModule, OrganisationMembershipModule],
   controllers: [OrganisationController],
   providers: [OrganisationService],
   exports: [OrganisationService]

@@ -2,6 +2,7 @@ import { Controller, Post, Body, Patch, Delete, Res } from '@nestjs/common';
 import { UserTableService } from './user-table.service';
 import { CreateUserTableDto } from './dto/create-user-table.dto';
 import { UpdateUserTableDto } from './dto/update-user-table.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import * as express from "express"
 import { LoginUserDto } from './dto/login-user.dto';
 import { Public } from 'src/common/decorator/public/public.decorator';
@@ -36,6 +37,11 @@ export class UserTableController {
   @Patch('/me')
   update(@CurrentUser() user: JwtPayload, @Body() updateUserTableDto: UpdateUserTableDto) {
     return this.userTableService.update(user.sub, updateUserTableDto);
+  }
+
+  @Patch('/me/password')
+  changePassword(@CurrentUser() user: JwtPayload, @Body() changePasswordDto: ChangePasswordDto) {
+    return this.userTableService.changePassword(user.sub, changePasswordDto);
   }
 
   @Delete('/me')
