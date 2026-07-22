@@ -2,13 +2,19 @@ import { ConflictException, Injectable, NotFoundException, UnauthorizedException
 import { CreateUserTableDto } from './dto/create-user-table.dto';
 import { UpdateUserTableDto } from './dto/update-user-table.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserTable } from './entities/user-table.entity';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import { randomBytes } from 'crypto';
 import { LoginUserDto } from './dto/login-user.dto';
 import { AuthService } from 'src/auth/auth.service';
 import { OrganisationMembership } from 'src/organisation-membership/entities/organisation-membership.entity';
+import { EmailService } from 'src/email/email.service';
+
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 
 @Injectable()
 export class UserTableService {
@@ -17,7 +23,8 @@ export class UserTableService {
     private readonly userRepository: Repository<UserTable>,
     @InjectRepository(OrganisationMembership)
     private readonly membershipRepository: Repository<OrganisationMembership>,
-    private readonly authService: AuthService
+    private readonly authService: AuthService,
+    private readonly emailService: EmailService,
   ) { }
 
   async create(createUserTableDto: CreateUserTableDto) {
@@ -85,6 +92,37 @@ export class UserTableService {
     user.password = await bcrypt.hash(changePasswordDto.newPassword, 10);
     await this.userRepository.save(user);
     return { message: 'Password updated successfully' };
+  }
+
+  async forgotPassword(forgotPasswordDto: ForgotPasswordDto) {
+    const user = await this.userRepository.findOne({ where: { email: forgotPasswordDto.email } });
+    if (user) {
+      user.resetPasswordToken = randomBytes(32).toString('hex');
+      user.resetPasswordExpiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS);
+      await this.userRepository.save(user);
+
+      await this.emailService.send({
+        to: user.email,
+        subject: 'Reset your password',
+        text: `Use this token to reset your password: ${user.resetPasswordToken}. It expires in 1 hour.`,
+      });
+    }
+
+    return { message: 'If an account exists for this email, a password reset link has been sent' };
+  }
+
+  async resetPassword(resetPasswordDto: ResetPasswordDto) {
+    const user = await this.userRepository.findOne({ where: { resetPasswordToken: resetPasswordDto.token } });
+    if (!user || !user.resetPasswordExpiresAt || user.resetPasswordExpiresAt.getTime() < Date.now()) {
+      throw new UnauthorizedException('Invalid or expired reset token');
+    }
+
+    user.password = await bcrypt.hash(resetPasswordDto.newPassword, 10);
+    user.resetPasswordToken = null;
+    user.resetPasswordExpiresAt = null;
+    await this.userRepository.save(user);
+
+    return { message: 'Password has been reset successfully' };
   }
 
   async remove(id: number) {

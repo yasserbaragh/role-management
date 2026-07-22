@@ -5,9 +5,10 @@ import { OrganisationMembershipController } from './organisation-membership.cont
 import { OrganisationMembership } from './entities/organisation-membership.entity';
 import { UserTable } from 'src/user-table/entities/user-table.entity';
 import { Role } from 'src/role/entities/role.entity';
+import { EmailModule } from 'src/email/email.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([OrganisationMembership, UserTable, Role])],
+  imports: [TypeOrmModule.forFeature([OrganisationMembership, UserTable, Role]), EmailModule],
   controllers: [OrganisationMembershipController],
   providers: [OrganisationMembershipService],
   exports: [TypeOrmModule],

@@ -9,6 +9,7 @@ import { OrganisationMembership } from './entities/organisation-membership.entit
 import { UserTable } from 'src/user-table/entities/user-table.entity';
 import { Role } from 'src/role/entities/role.entity';
 import { membershipCacheKey } from 'src/common/guards/roles/roles.guard';
+import { EmailService } from 'src/email/email.service';
 
 @Injectable()
 export class OrganisationMembershipService {
@@ -24,6 +25,8 @@ export class OrganisationMembershipService {
 
     @Inject(CACHE_MANAGER)
     private readonly cache: Cache,
+
+    private readonly emailService: EmailService,
   ) {}
 
   private async findScoped(id: number, organisationId: number) {
@@ -68,7 +71,15 @@ export class OrganisationMembershipService {
       organisation: { id: organisationId },
     });
 
-    return this.membershipRepository.save(membership);
+    const saved = await this.membershipRepository.save(membership);
+
+    await this.emailService.send({
+      to: user.email,
+      subject: 'You were added to an organisation',
+      text: `You have been added to an organisation with the role "${role.name}".`,
+    });
+
+    return saved;
   }
 
   findAll(organisationId: number) {

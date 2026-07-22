@@ -3,6 +3,8 @@ import { UserTableService } from './user-table.service';
 import { CreateUserTableDto } from './dto/create-user-table.dto';
 import { UpdateUserTableDto } from './dto/update-user-table.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import * as express from "express"
 import { LoginUserDto } from './dto/login-user.dto';
 import { Public } from 'src/common/decorator/public/public.decorator';
@@ -32,6 +34,18 @@ export class UserTableController {
     });
 
     return { message: `Logged in successfully` };
+  }
+
+  @Public()
+  @Post('/forgot-password')
+  forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
+    return this.userTableService.forgotPassword(forgotPasswordDto);
+  }
+
+  @Public()
+  @Post('/reset-password')
+  resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    return this.userTableService.resetPassword(resetPasswordDto);
   }
 
   @Patch('/me')

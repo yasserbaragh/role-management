@@ -13,4 +13,10 @@ export class UserTable {
 
     @Column()
     fullName!: string
+
+    @Column({ type: 'varchar', nullable: true })
+    resetPasswordToken!: string | null
+
+    @Column({ type: 'timestamptz', nullable: true })
+    resetPasswordExpiresAt!: Date | null
 }

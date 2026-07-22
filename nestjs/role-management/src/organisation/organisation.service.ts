@@ -10,6 +10,7 @@ import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
 import { UserTable } from 'src/user-table/entities/user-table.entity';
 import { OrganisationMembership } from 'src/organisation-membership/entities/organisation-membership.entity';
 import { MembershipInvitation } from 'src/memberhsip-invitation/entities/membership-invitation.entity';
+import { EmailService } from 'src/email/email.service';
 
 @Injectable()
 export class OrganisationService {
@@ -27,7 +28,9 @@ export class OrganisationService {
     private readonly membershipRepository: Repository<OrganisationMembership>,
 
     @InjectRepository(MembershipInvitation)
-    private readonly invitationRepository: Repository<MembershipInvitation>
+    private readonly invitationRepository: Repository<MembershipInvitation>,
+
+    private readonly emailService: EmailService,
   ) {}
 
   private async ensureOwner(organisationId: number, userId: number) {
@@ -119,7 +122,15 @@ export class OrganisationService {
       isOwner: false,
     })
 
-    return this.membershipRepository.save(membership)
+    const saved = await this.membershipRepository.save(membership)
+
+    await this.emailService.send({
+      to: user.email,
+      subject: 'You were added to an organisation',
+      text: `You have been added to an organisation with the role "${role.name}".`,
+    })
+
+    return saved
   }
 
   async update(id: number, updateOrganisationDto: UpdateOrganisationDto, user: JwtPayload) {

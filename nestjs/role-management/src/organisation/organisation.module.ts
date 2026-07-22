@@ -11,9 +11,10 @@ import { Role } from 'src/role/entities/role.entity';
 import { UserTable } from 'src/user-table/entities/user-table.entity';
 import { OrganisationMembership } from 'src/organisation-membership/entities/organisation-membership.entity';
 import { MembershipInvitation } from 'src/memberhsip-invitation/entities/membership-invitation.entity';
+import { EmailModule } from 'src/email/email.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Organisation, Role, UserTable, OrganisationMembership, MembershipInvitation]), RoleModule, UserTableModule, AuthModule, OrganisationMembershipModule],
+  imports: [TypeOrmModule.forFeature([Organisation, Role, UserTable, OrganisationMembership, MembershipInvitation]), RoleModule, UserTableModule, AuthModule, OrganisationMembershipModule, EmailModule],
   controllers: [OrganisationController],
   providers: [OrganisationService],
   exports: [OrganisationService]

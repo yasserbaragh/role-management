@@ -1,98 +1,59 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Role Management
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A backend for managing organisations, members, and role-based permissions. Users can create organisations, invite or add other users, assign them roles, and each role carries a set of permissions that gate what its members can do (view/edit roles, memberships, permissions, etc.).
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Stack
 
-## Description
+- NestJS + TypeORM + PostgreSQL
+- Redis (caching)
+- JWT auth via httpOnly cookies
+- Optional email (SMTP) for "added to org" and "forgot password" notifications
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Running it
 
-## Project setup
+### With Docker (easiest)
 
 ```bash
-$ npm install
+cp .env.example .env      # fill in DB_PASSWORD and JWT_SECRET at least
+docker compose up --build
 ```
 
-## Compile and run the project
+This starts Postgres, Redis, and the app together. On first run it also seeds the base permission catalog automatically. The app is reachable at `http://localhost:3000`.
+
+To stop: `docker compose down` (add `-v` to also wipe the database volume).
+
+### Without Docker
+
+You need a local Postgres and Redis running yourself.
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+cp .env.example .env      # point DB_HOST/REDIS_HOST at your local instances
+npm install
+npm run start:dev
 ```
 
-## Run tests
+The database schema is created automatically on boot (`synchronize: true`) — no manual migrations needed for local dev. You will need to seed the `permission` table yourself (see `db/init/01-seed-permissions.sql`) if you're not using Docker.
 
-```bash
-# unit tests
-$ npm run test
+## Project structure
 
-# e2e tests
-$ npm run test:e2e
+Each domain lives in its own folder under `src/`, following the same pattern: `*.module.ts`, `*.controller.ts`, `*.service.ts`, `entities/`, `dto/`.
 
-# test coverage
-$ npm run test:cov
-```
+- `auth` / `user-table` — accounts, login, JWT
+- `organisation` — create/select/delete an organisation, add members
+- `organisation-membership` — who belongs to which org, with what role
+- `role` / `permission` — roles and the permission catalog
+- `memberhsip-invitation` — invite by link or direct add
+- `email` — SMTP sending, no-ops if disabled
+- `common/guards/roles` — the `RolesGuard` that checks the `@Permissions(...)` decorator on every request
 
-## Deployment
+## Making changes
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+- **Adding an endpoint that needs a permission check:** add `@Permissions('SOME-KEY')` above the controller method. The key must already exist in the `permission` table (add it to `db/init/01-seed-permissions.sql` too, so fresh Docker setups get it).
+- **New entity:** add it to the relevant module's `TypeOrmModule.forFeature([...])` — `synchronize: true` will create the table for you, no migration needed.
+- **Cross-module access:** most services just inject another module's entity repository directly rather than importing the whole module — follow that existing pattern instead of introducing new module dependencies.
+- **Caching:** a few read-heavy services (roles, permissions, the permission guard lookup) cache in Redis via `@Inject(CACHE_MANAGER)`. If you add a write path that changes cached data, make sure to evict the relevant key — see `role.service.ts` for the pattern.
+- **Tests:** `npm run test` (Jest, unit tests colocated as `*.spec.ts`).
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## Environment variables
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+See `.env.example` for the full list. Everything except `DB_PASSWORD` and `JWT_SECRET` has a sane default; `SMTP_*` can stay empty as long as `EMAIL_ENABLED=false`.
